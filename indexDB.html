@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IndexDB</title>
+</head>
+<body>
+    <h2>Add a person</h2>
+    <input type="text" id="name" placeholder="Type your name"><br>
+    <input type="number" id="age" placeholder="Type your age"><br>
+    <button onclick="addValue()">Save</button>
+
+    <h1>Added users</h1>
+    <ul id="list"></ul>
+
+    <script>
+        let db;
+        const request = indexedDB.open("PersonsDB",1);
+
+        request.onupgradeneeded = function(event){
+            db = event.target.result;
+            db.createObjectStore("persons",{keyPath:"id",autoIncrement:true});
+        };
+
+        request.onsuccess = function(event){
+            db = event.target.result;
+            listValues();
+        }
+
+        request.onerror = function(event){
+            console.error("Database error: ",event.target.errorCode);
+        };
+
+        function addValue(){
+            const name = document.getElementById("name").value;
+            const age = parseInt(document.getElementById("age").value);
+
+            if(!name || !age) return alert("Please type your name and age");
+
+            const tx = db.transaction("persons","readwrite");
+            const store = tx.objectStore("persons");
+            store.add({name,age});
+
+            tx.oncomplete = () =>{
+                document.getElementById("name").value="";
+                document.getElementById("age").value="";
+                listValues();
+            };
+        }
+
+        function listValues(){
+            const list = document.getElementById("list");
+            list.innerHTML = "";
+
+            const tx = db.transaction("persons","readonly");
+            const store = tx.objectStore("persons");
+            const request = store.openCursor();
+
+            request.onsuccess = function(event){
+                const cursor = event.target.result;
+                if(cursor){
+                    const li = document.createElement("li");
+                    li.textContent = `Name: ${cursor.value.name}, Age: ${cursor.value.age}`;
+                list.appendChild(li);
+                cursor.continue();
+                }
+            }
+        }
+    </script>
+</body>
+</html>
